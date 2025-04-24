@@ -24,6 +24,7 @@ async function generateCharacterSpritesheet(description, options = {})
 | padding | number | 1 | Padding between sprites |
 | direction | string | 'right' | Base direction the character faces |
 | save | boolean | false | Whether to save the generated spritesheet to disk |
+| backgroundColor | string | 'transparent' | Background color of the spritesheet |
 
 ## Process Flow
 
@@ -33,11 +34,12 @@ graph TD
     B --> C[Generate Initial Image with DALL-E 3]
     C --> D[Process Image into Spritesheet]
     D --> E[Apply Padding]
-    E --> F{Save to Disk?}
-    F -->|Yes| G[Save Spritesheet]
-    F -->|No| H[Return Result]
-    G --> H
-    H --> I[End]
+    E --> F[Apply Background Color]
+    F --> G{Save to Disk?}
+    G -->|Yes| H[Save Spritesheet]
+    G -->|No| I[Return Result]
+    H --> I
+    I --> J[End]
 ```
 
 ## Return Value
@@ -52,6 +54,7 @@ The function returns a Promise that resolves to an object with the following pro
   - `totalFrames` (number): Total number of frames in the spritesheet
   - `dimensions` (object): Width and height of the spritesheet
   - `frameData` (object): Information about each animation state's frames
+  - `backgroundColor` (string): Background color of the spritesheet
 
 ## Examples
 
@@ -74,12 +77,13 @@ const result = await generateCharacterSpritesheet('a fierce dragon', {
 });
 ```
 
-### Saving to Disk
+### Saving to Disk with Custom Background
 
 ```javascript
 await generateCharacterSpritesheet('a ninja warrior', {
   save: true,
-  size: '2048x2048'
+  size: '2048x2048',
+  backgroundColor: '#FF00FF' // Magenta background
 });
 // Saves to ./assets/ninja_warrior_spritesheet.png
 ```
@@ -90,6 +94,7 @@ await generateCharacterSpritesheet('a ninja warrior', {
 - The generated spritesheet is organized with each row representing a different animation state.
 - When `save` is true, the spritesheet is saved in the `assets` folder of the current working directory.
 - The function automatically processes the generated image to create a properly formatted spritesheet with the specified number of frames and states.
+- The `backgroundColor` option allows for customization of the spritesheet background. It can be set to 'transparent' or any valid CSS color value.
 
 # Image Processing Pipeline
 
@@ -103,7 +108,8 @@ The pipeline consists of the following main steps:
 2. Image Download 
 3. Spritesheet Generation
 4. Background Removal (Optional)
-5. Image Saving (Optional)
+5. Background Color Application
+6. Image Saving (Optional)
 
 ## Pipeline Flow
 
@@ -116,13 +122,14 @@ graph TD
     E -->|Character| F[Generate Spritesheet]
     E -->|Landscape| G{Remove Background?}
     G -->|Yes| H[Remove Background]
-    G -->|No| I{Save Image?}
+    G -->|No| I[Apply Background Color]
     H --> I
     F --> I
-    I -->|Yes| J[Save to Filesystem]
-    I -->|No| K[Return Result]
-    J --> K
-    K --> L[End]
+    I --> J{Save Image?}
+    J -->|Yes| K[Save to Filesystem]
+    J -->|No| L[Return Result]
+    K --> L
+    L --> M[End]
 ```
 
 ## Detailed Pipeline
@@ -178,14 +185,23 @@ if (options.removeBackground) {
 
 The background removal uses the Jimp library to replace pixels matching a target color (typically white) with transparency.
 
-### 5. Image Saving (Optional)
+### 5. Background Color Application
+
+Apply the specified background color to the spritesheet or landscape image:
+
+```javascript
+const backgroundColor = options.backgroundColor || 'transparent';
+const imageWithBackground = await applyBackgroundColor(processedImage, backgroundColor);
+```
+
+### 6. Image Saving (Optional)
 
 If requested, the final processed image can be saved to the local filesystem:
 
 ```javascript
 if (options.save) {
   const filename = path.join(assetsDir, `${description.replace(/\s+/g, '_')}_landscape.png`);
-  await sharp(imgBuffer).toFile(filename);
+  await sharp(imageWithBackground).toFile(filename);
 }
 ```
 
@@ -195,6 +211,6 @@ The pipeline returns an object containing:
 
 - URL of the original DALL-E generated image
 - Base64 encoded processed image (spritesheet or landscape)
-- Metadata about the generated sprite, including dimensions, animation states (for characters), and other relevant details
+- Metadata about the generated sprite, including dimensions, animation states (for characters), background color, and other relevant details
 
 This processed image data can then be used directly in game development or further asset creation workflows.

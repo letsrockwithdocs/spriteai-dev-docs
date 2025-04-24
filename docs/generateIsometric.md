@@ -92,6 +92,10 @@ console.log("Image saved and accessible at:", result.url);
 
 * Ensure you have the necessary API credentials and permissions set up to use the OpenAI image generation service.
 
+* The function is designed to work with various types of objects and characters, but complex or highly detailed descriptions may lead to less accurate results.
+
+* Consider using simple, clear descriptions for best results in generating isometric sprites.
+
 ## Error Handling
 
 ```mermaid
@@ -107,3 +111,39 @@ graph TD
     F --> I[End]
     H --> I
 ```
+
+## Performance Considerations
+
+* The function's performance depends on the response time of the DALL-E 3 API and the complexity of the image processing required.
+
+* For applications requiring multiple sprites, consider implementing a caching mechanism to store and reuse previously generated sprites when appropriate.
+
+* If you need to generate a large number of sprites, consider implementing a queue system to manage API rate limits and prevent overloading the service.
+
+## Best Practices
+
+* Use concise and specific descriptions to get the most accurate results.
+
+* Implement error handling in your code to gracefully manage potential issues with the API or image processing.
+
+* Consider implementing a retry mechanism for handling temporary API failures or network issues.
+
+* Regularly update your API credentials and stay informed about any changes or updates to the DALL-E 3 API that may affect the function's performance.
+
+## Limitations
+
+* The quality and accuracy of the generated sprites depend on the capabilities of the DALL-E 3 model and may not always meet specific design requirements.
+
+* The function is primarily designed for generating static isometric sprites and may not be suitable for creating animated or highly detailed game assets.
+
+* There may be limitations on the number of API calls you can make within a given time period, depending on your OpenAI account type and usage limits.
+
+## Future Improvements
+
+* Integration with other AI image generation models to provide alternative options or improved results.
+
+* Adding support for generating sprite sheets or simple animations.
+
+* Implementing more advanced image processing techniques to further enhance the isometric perspective of generated sprites.
+
+* Developing a user interface or command-line tool for easier sprite generation and management.

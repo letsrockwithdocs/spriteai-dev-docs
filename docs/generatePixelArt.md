@@ -75,7 +75,7 @@ For character spritesheets, the downloaded image is processed to create an organ
 ```javascript
 const spritesheet = await generateSpritesheet(imgBuffer, {
   rows: states.length,
-  framesPerRow: framesPerState,
+  framesPerState: framesPerState,
   padding: padding
 });
 ```
@@ -173,3 +173,32 @@ classDiagram
     }
     OutputObject *-- Metadata
 ```
+
+## Error Handling
+
+The pipeline includes robust error handling to manage potential issues during the image generation and processing stages:
+
+- API Request Errors: If the DALL-E API request fails, the error is caught and logged, allowing for appropriate user feedback or retry mechanisms.
+- Image Download Errors: Network issues or invalid image data are handled to prevent pipeline disruption.
+- Processing Errors: Errors during spritesheet generation or background removal are caught and reported, ensuring the pipeline can gracefully handle unexpected issues.
+
+```javascript
+try {
+  // Pipeline steps
+} catch (error) {
+  console.error('Error in image processing pipeline:', error);
+  // Handle error (e.g., return error response, retry, etc.)
+}
+```
+
+Proper error handling ensures a more robust and user-friendly experience, especially important in a production environment where reliability is key.
+
+## Performance Considerations
+
+To optimize the pipeline's performance:
+
+1. Image caching is implemented to reduce redundant API calls and image processing for frequently requested sprites.
+2. Asynchronous processing is used where possible to improve responsiveness.
+3. Resource-intensive operations like background removal are optional and can be toggled based on user needs or system capabilities.
+
+These optimizations help balance quality output with efficient resource usage, crucial for maintaining responsiveness in game development workflows.

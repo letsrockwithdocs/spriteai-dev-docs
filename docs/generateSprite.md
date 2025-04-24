@@ -207,3 +207,97 @@ await generateCharacterSpritesheet('a ninja warrior', {
 - The generated spritesheet is organized with each row representing a different animation state.
 - When `save` is true, the spritesheet is saved in the `assets` folder of the current working directory.
 - The function automatically processes the generated image to create a properly formatted spritesheet with the specified number of frames and states.
+
+# generateLandscapeSprite
+
+Generates a pixel art landscape sprite with optional background removal.
+
+## Function Signature
+
+```javascript
+async function generateLandscapeSprite(description, options = {})
+```
+
+## Parameters
+
+- `description` (string): A description of the landscape to generate.
+- `options` (object, optional): Configuration options for the landscape sprite generation.
+
+## Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| size | string | '1024x1024' | Output image size |
+| style | string | 'pixel-art' | Art style to use |
+| removeBackground | boolean | false | Whether to remove the background |
+| save | boolean | false | Whether to save the generated landscape to disk |
+
+## Process Diagram
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant generateLandscapeSprite
+    participant DALL-E API
+    participant ImageProcessor
+    participant FileSystem
+
+    User->>generateLandscapeSprite: Call with description and options
+    generateLandscapeSprite->>DALL-E API: Request image generation
+    DALL-E API-->>generateLandscapeSprite: Return generated image
+    alt removeBackground is true
+        generateLandscapeSprite->>ImageProcessor: Remove background
+        ImageProcessor-->>generateLandscapeSprite: Return processed image
+    end
+    alt save option is true
+        generateLandscapeSprite->>FileSystem: Save landscape to disk
+    end
+    generateLandscapeSprite-->>User: Return landscape sprite and metadata
+```
+
+## Return Value
+
+The function returns a Promise that resolves to an object with the following properties:
+
+- `original` (string): URL of the original generated image
+- `landscape` (string): Base64-encoded PNG data URI of the processed landscape sprite
+- `metadata` (object): Metadata about the generated landscape sprite
+  - `dimensions` (object): Width and height of the landscape sprite
+  - `backgroundRemoved` (boolean): Whether background removal was performed
+
+## Examples
+
+### Basic Usage
+
+```javascript
+import { generateLandscapeSprite } from 'spriteAI';
+
+const result = await generateLandscapeSprite('a lush forest with a river');
+console.log(result.landscape); // Base64 encoded landscape sprite
+console.log(result.metadata); // Metadata about the landscape sprite
+```
+
+### With Background Removal
+
+```javascript
+const result = await generateLandscapeSprite('a desert oasis', {
+  removeBackground: true
+});
+```
+
+### Saving to Disk
+
+```javascript
+await generateLandscapeSprite('a snowy mountain peak', {
+  save: true,
+  size: '2048x2048'
+});
+// Saves to ./assets/snowy_mountain_peak_landscape.png
+```
+
+## Notes
+
+- The function uses DALL-E 3 to generate the initial landscape image.
+- Background removal is optional and can be activated using the `removeBackground` option.
+- When `save` is true, the landscape sprite is saved in the `assets` folder of the current working directory.
+- The generated landscape sprite is suitable for use in 2D games or as part of larger game environments.

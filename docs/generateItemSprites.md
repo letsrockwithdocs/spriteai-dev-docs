@@ -2,227 +2,129 @@
 slug: /generate-item-sprites
 sidebar_position: 4
 ---
-# Image Processing Pipeline
+# generateItemSprites
 
-This page describes the image processing pipeline used in the SpriteAI project, from initial API request through final sprite generation and optional background removal.
-
-## Overview
-
-The pipeline consists of the following main steps:
-
-1. API Request to DALL-E
-2. Image Download 
-3. Spritesheet Generation
-4. Background Removal (Optional)
-5. Image Saving (Optional)
-
-```mermaid
-graph TD
-    A[Start] --> B[API Request to DALL-E]
-    B --> C[Image Download]
-    C --> D[Spritesheet Generation]
-    D --> E{Background Removal?}
-    E -->|Yes| F[Remove Background]
-    E -->|No| G{Save Image?}
-    F --> G
-    G -->|Yes| H[Save Image]
-    G -->|No| I[End]
-    H --> I
-```
-
-## Detailed Pipeline
-
-### 1. API Request to DALL-E
-
-The process begins with constructing a detailed prompt describing the desired character or landscape sprite. This prompt is sent to OpenAI's DALL-E 3 model via API request:
-
-```javascript
-const openAiObject = new OpenAI();
-const response = await openAiObject.images.generate({
-  model: "dall-e-3",
-  prompt: prompt,
-  size: size,
-  n: 1
-});
-```
-
-### 2. Image Download
-
-Once DALL-E generates the image, it's downloaded using axios:
-
-```javascript
-const res = await axios.get(response.data[0].url, { responseType: 'arraybuffer' });
-const imgBuffer = Buffer.from(res.data);
-```
-
-### 3. Spritesheet Generation 
-
-For character spritesheets, the downloaded image is processed to create an organized spritesheet with proper padding between sprites:
-
-```javascript
-const spritesheet = await generateSpritesheet(imgBuffer, {
-  rows: states.length,
-  framesPerRow: framesPerState,
-  padding: padding
-});
-```
-
-### 4. Background Removal (Optional)
-
-For landscape sprites, there's an option to remove the background:
-
-```javascript
-if (options.removeBackground) {
-  // Process involves:
-  // 1. Writing image to temporary file
-  // 2. Removing background color
-  // 3. Reading processed image back
-  // 4. Cleaning up temporary files
-}
-```
-
-The background removal uses the Jimp library to replace pixels matching a target color (typically white) with transparency.
-
-### 5. Image Saving (Optional)
-
-If requested, the final processed image can be saved to the local filesystem:
-
-```javascript
-if (options.save) {
-  const filename = path.join(assetsDir, `${description.replace(/\s+/g, '_')}_landscape.png`);
-  await sharp(imgBuffer).toFile(filename);
-}
-```
-
-## Output
-
-The pipeline returns an object containing:
-
-- URL of the original DALL-E generated image
-- Base64 encoded processed image (spritesheet or landscape)
-- Metadata about the generated sprite, including dimensions, animation states (for characters), and other relevant details
-
-This processed image data can then be used directly in game development or further asset creation workflows.
-
-```mermaid
-classDiagram
-    class Output {
-        +String originalUrl
-        +String processedImageBase64
-        +Object metadata
-    }
-    class Metadata {
-        +Object dimensions
-        +String[] animationStates
-        +Object additionalDetails
-    }
-    Output *-- Metadata
-```
-
-# generateCharacterSpritesheet
-
-Generates a pixel art character spritesheet with multiple animation states.
+Generates pixel art item sprites for use in games or other applications.
 
 ## Function Signature
 
 ```javascript
-async function generateCharacterSpritesheet(description, options = {})
+async function generateItemSprites(description, options = {})
 ```
 
 ## Parameters
 
-- `description` (string): A description of the character to generate.
-- `options` (object, optional): Configuration options for the spritesheet generation.
+- `description` (string): A description of the item or set of items to generate.
+- `options` (object, optional): Configuration options for the sprite generation.
 
 ## Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| states | string[] | ['idle', 'walk', 'run', 'attack'] | Animation states to generate |
-| framesPerState | number | 6 | Number of frames per animation state |
+| count | number | 1 | Number of item sprites to generate |
 | size | string | '1024x1024' | Output image size |
 | style | string | 'pixel-art' | Art style to use |
-| padding | number | 1 | Padding between sprites |
-| direction | string | 'right' | Base direction the character faces |
-| save | boolean | false | Whether to save the generated spritesheet to disk |
+| background | string | 'transparent' | Background style ('transparent' or 'white') |
+| save | boolean | false | Whether to save the generated sprites to disk |
+
+## Process Flow
+
+```mermaid
+graph TD
+    A[Start] --> B[Parse Description and Options]
+    B --> C[Generate DALL-E Prompt]
+    C --> D[Call DALL-E API]
+    D --> E[Download Generated Image]
+    E --> F[Process Image]
+    F --> G{Multiple Items?}
+    G -->|Yes| H[Split Into Individual Sprites]
+    G -->|No| I[Prepare Single Sprite]
+    H --> J{Save to Disk?}
+    I --> J
+    J -->|Yes| K[Save Sprite(s)]
+    J -->|No| L[Prepare Result Object]
+    K --> L
+    L --> M[Return Result]
+    M --> N[End]
+```
 
 ## Return Value
 
 The function returns a Promise that resolves to an object with the following properties:
 
 - `original` (string): URL of the original generated image
-- `spritesheet` (string): Base64-encoded PNG data URI of the processed spritesheet
-- `metadata` (object): Metadata about the generated spritesheet
-  - `states` (string[]): List of animation states
-  - `framesPerState` (number): Number of frames per state
-  - `totalFrames` (number): Total number of frames in the spritesheet
-  - `dimensions` (object): Width and height of the spritesheet
-  - `frameData` (object): Information about each animation state's frames
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant generateCharacterSpritesheet
-    participant DALL-E API
-    participant ImageProcessor
-    
-    User->>generateCharacterSpritesheet: Call with description and options
-    generateCharacterSpritesheet->>DALL-E API: Request image generation
-    DALL-E API-->>generateCharacterSpritesheet: Return generated image URL
-    generateCharacterSpritesheet->>ImageProcessor: Process image into spritesheet
-    ImageProcessor-->>generateCharacterSpritesheet: Return processed spritesheet
-    generateCharacterSpritesheet-->>User: Return result object
-```
+- `sprites` (array): An array of objects, each containing:
+  - `image` (string): Base64-encoded PNG data URI of the processed sprite
+  - `metadata` (object): Metadata about the generated sprite
+    - `dimensions` (object): Width and height of the sprite
+    - `filename` (string): Filename of the saved sprite (if save option was true)
 
 ## Examples
 
 ### Basic Usage
 
 ```javascript
-import { generateCharacterSpritesheet } from 'spriteAI';
+import { generateItemSprites } from 'spriteAI';
 
-const result = await generateCharacterSpritesheet('a cute robot');
-console.log(result.spritesheet); // Base64 encoded spritesheet
-console.log(result.metadata); // Metadata about the spritesheet
+const result = await generateItemSprites('a magical sword');
+console.log(result.sprites[0].image); // Base64 encoded sprite
+console.log(result.sprites[0].metadata); // Metadata about the sprite
 ```
 
-### Custom Animation States
+### Generating Multiple Items
 
 ```javascript
-const result = await generateCharacterSpritesheet('a fierce dragon', {
-  states: ['idle', 'fly', 'breathe-fire', 'roar'],
-  framesPerState: 8
+const result = await generateItemSprites('potion bottles: health, mana, and strength', {
+  count: 3,
+  size: '512x512'
+});
+
+result.sprites.forEach((sprite, index) => {
+  console.log(`Sprite ${index + 1}:`, sprite.image);
 });
 ```
 
 ### Saving to Disk
 
 ```javascript
-await generateCharacterSpritesheet('a ninja warrior', {
-  save: true,
-  size: '2048x2048'
+await generateItemSprites('a set of gemstones: ruby, emerald, sapphire, diamond', {
+  count: 4,
+  save: true
 });
-// Saves to ./assets/ninja_warrior_spritesheet.png
+// Saves to ./assets/gemstone_1.png, gemstone_2.png, etc.
 ```
 
 ## Notes
 
-- The function uses DALL-E 3 to generate the initial spritesheet image.
-- The generated spritesheet is organized with each row representing a different animation state.
-- When `save` is true, the spritesheet is saved in the `assets` folder of the current working directory.
-- The function automatically processes the generated image to create a properly formatted spritesheet with the specified number of frames and states.
+- The function uses DALL-E 3 to generate the initial item sprite image(s).
+- When generating multiple items, the function attempts to intelligently split the generated image into individual sprites.
+- The 'pixel-art' style is used by default to create retro-style game assets.
+- When `save` is true, the sprite(s) are saved in the `assets` folder of the current working directory.
+- The function automatically processes the generated image to create properly formatted sprites with transparent backgrounds (unless 'white' background is specified).
+
+## Error Handling
 
 ```mermaid
 graph TD
-    A[Start] --> B[Parse Options]
-    B --> C[Generate DALL-E Prompt]
-    C --> D[Call DALL-E API]
-    D --> E[Download Generated Image]
-    E --> F[Process into Spritesheet]
-    F --> G{Save to Disk?}
-    G -->|Yes| H[Save Spritesheet]
-    G -->|No| I[Prepare Result Object]
-    H --> I
-    I --> J[Return Result]
-    J --> K[End]
+    A[Start] --> B{Valid Input?}
+    B -->|Yes| C[Generate Sprites]
+    B -->|No| D[Throw Input Error]
+    C --> E{API Call Successful?}
+    E -->|Yes| F[Process Results]
+    E -->|No| G[Throw API Error]
+    F --> H{Processing Successful?}
+    H -->|Yes| I[Return Results]
+    H -->|No| J[Throw Processing Error]
+    I --> K[End]
+    D --> K
+    G --> K
+    J --> K
 ```
+
+The function includes error handling for various scenarios:
+
+- Invalid input parameters will result in an `InputError`
+- Failed API calls to DALL-E will throw an `APIError`
+- Issues during image processing will result in a `ProcessingError`
+
+It's recommended to wrap calls to `generateItemSprites` in a try-catch block to handle these potential errors gracefully in your application.
