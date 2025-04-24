@@ -2,69 +2,227 @@
 slug: /generate-item-sprites
 sidebar_position: 4
 ---
+# Image Processing Pipeline
 
-# generateItemSprites
+This page describes the image processing pipeline used in the SpriteAI project, from initial API request through final sprite generation and optional background removal.
 
-## Brief Description
-`generateItemSprites` is a function that generates a collection of item sprites for game assets based on a given description, using AI-powered image generation.
+## Overview
 
-## Usage
-To use `generateItemSprites`, import it from the sprite module and call it with a description of the items you want to generate.
+The pipeline consists of the following main steps:
+
+1. API Request to DALL-E
+2. Image Download 
+3. Spritesheet Generation
+4. Background Removal (Optional)
+5. Image Saving (Optional)
+
+```mermaid
+graph TD
+    A[Start] --> B[API Request to DALL-E]
+    B --> C[Image Download]
+    C --> D[Spritesheet Generation]
+    D --> E{Background Removal?}
+    E -->|Yes| F[Remove Background]
+    E -->|No| G{Save Image?}
+    F --> G
+    G -->|Yes| H[Save Image]
+    G -->|No| I[End]
+    H --> I
+```
+
+## Detailed Pipeline
+
+### 1. API Request to DALL-E
+
+The process begins with constructing a detailed prompt describing the desired character or landscape sprite. This prompt is sent to OpenAI's DALL-E 3 model via API request:
 
 ```javascript
-import { generateItemSprites } from './path/to/sprite/module';
+const openAiObject = new OpenAI();
+const response = await openAiObject.images.generate({
+  model: "dall-e-3",
+  prompt: prompt,
+  size: size,
+  n: 1
+});
+```
 
-const result = await generateItemSprites(description, options);
+### 2. Image Download
+
+Once DALL-E generates the image, it's downloaded using axios:
+
+```javascript
+const res = await axios.get(response.data[0].url, { responseType: 'arraybuffer' });
+const imgBuffer = Buffer.from(res.data);
+```
+
+### 3. Spritesheet Generation 
+
+For character spritesheets, the downloaded image is processed to create an organized spritesheet with proper padding between sprites:
+
+```javascript
+const spritesheet = await generateSpritesheet(imgBuffer, {
+  rows: states.length,
+  framesPerRow: framesPerState,
+  padding: padding
+});
+```
+
+### 4. Background Removal (Optional)
+
+For landscape sprites, there's an option to remove the background:
+
+```javascript
+if (options.removeBackground) {
+  // Process involves:
+  // 1. Writing image to temporary file
+  // 2. Removing background color
+  // 3. Reading processed image back
+  // 4. Cleaning up temporary files
+}
+```
+
+The background removal uses the Jimp library to replace pixels matching a target color (typically white) with transparency.
+
+### 5. Image Saving (Optional)
+
+If requested, the final processed image can be saved to the local filesystem:
+
+```javascript
+if (options.save) {
+  const filename = path.join(assetsDir, `${description.replace(/\s+/g, '_')}_landscape.png`);
+  await sharp(imgBuffer).toFile(filename);
+}
+```
+
+## Output
+
+The pipeline returns an object containing:
+
+- URL of the original DALL-E generated image
+- Base64 encoded processed image (spritesheet or landscape)
+- Metadata about the generated sprite, including dimensions, animation states (for characters), and other relevant details
+
+This processed image data can then be used directly in game development or further asset creation workflows.
+
+```mermaid
+classDiagram
+    class Output {
+        +String originalUrl
+        +String processedImageBase64
+        +Object metadata
+    }
+    class Metadata {
+        +Object dimensions
+        +String[] animationStates
+        +Object additionalDetails
+    }
+    Output *-- Metadata
+```
+
+# generateCharacterSpritesheet
+
+Generates a pixel art character spritesheet with multiple animation states.
+
+## Function Signature
+
+```javascript
+async function generateCharacterSpritesheet(description, options = {})
 ```
 
 ## Parameters
-- `description` (string, required): A text description of the items to generate.
-- `options` (object, optional):
-  - `itemCount` (number): Number of items to generate (default: 4).
-  - `size` (string): Size of the generated image (default: "1024x1024").
-  - `style` (string): Style of the generated sprites (default: "pixel-art").
-  - `padding` (number): Padding between items (default: 1).
-  - `itemType` (string): Type of items to generate (default: "equipment").
-  - `background` (string): Background color of the sprite sheet (default: "white").
-  - `save` (boolean): Whether to save the generated image to disk.
+
+- `description` (string): A description of the character to generate.
+- `options` (object, optional): Configuration options for the spritesheet generation.
+
+## Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| states | string[] | ['idle', 'walk', 'run', 'attack'] | Animation states to generate |
+| framesPerState | number | 6 | Number of frames per animation state |
+| size | string | '1024x1024' | Output image size |
+| style | string | 'pixel-art' | Art style to use |
+| padding | number | 1 | Padding between sprites |
+| direction | string | 'right' | Base direction the character faces |
+| save | boolean | false | Whether to save the generated spritesheet to disk |
 
 ## Return Value
-Returns a Promise that resolves to an object containing:
-- `original`: URL of the original generated image.
-- `itemSheet`: Base64-encoded image data URL of the processed item sprite sheet.
-- `metadata`: Object containing information about the generated items:
-  - `itemCount`: Number of items generated.
-  - `itemType`: Type of items generated.
-  - `dimensions`: Object with width and height of the sprite sheet.
-  - `itemData`: Object with information about the item layout (rows, columns, total items).
+
+The function returns a Promise that resolves to an object with the following properties:
+
+- `original` (string): URL of the original generated image
+- `spritesheet` (string): Base64-encoded PNG data URI of the processed spritesheet
+- `metadata` (object): Metadata about the generated spritesheet
+  - `states` (string[]): List of animation states
+  - `framesPerState` (number): Number of frames per state
+  - `totalFrames` (number): Total number of frames in the spritesheet
+  - `dimensions` (object): Width and height of the spritesheet
+  - `frameData` (object): Information about each animation state's frames
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant generateCharacterSpritesheet
+    participant DALL-E API
+    participant ImageProcessor
+    
+    User->>generateCharacterSpritesheet: Call with description and options
+    generateCharacterSpritesheet->>DALL-E API: Request image generation
+    DALL-E API-->>generateCharacterSpritesheet: Return generated image URL
+    generateCharacterSpritesheet->>ImageProcessor: Process image into spritesheet
+    ImageProcessor-->>generateCharacterSpritesheet: Return processed spritesheet
+    generateCharacterSpritesheet-->>User: Return result object
+```
 
 ## Examples
 
-1. Generate a basic item sprite sheet:
+### Basic Usage
+
 ```javascript
-const result = await generateItemSprites("Fantasy RPG weapons");
-console.log(result.itemSheet);
-console.log(result.metadata);
+import { generateCharacterSpritesheet } from 'spriteAI';
+
+const result = await generateCharacterSpritesheet('a cute robot');
+console.log(result.spritesheet); // Base64 encoded spritesheet
+console.log(result.metadata); // Metadata about the spritesheet
 ```
 
-2. Generate a custom item sprite sheet:
+### Custom Animation States
+
 ```javascript
-const options = {
-  itemCount: 6,
-  size: "512x512",
-  style: "hand-drawn",
-  itemType: "potions",
-  background: "transparent",
-  save: true
-};
-const result = await generateItemSprites("Magical potions with glowing effects", options);
-console.log(result.metadata.itemData);
+const result = await generateCharacterSpritesheet('a fierce dragon', {
+  states: ['idle', 'fly', 'breathe-fire', 'roar'],
+  framesPerState: 8
+});
 ```
 
-## Notes or Considerations
-- The function uses AI models (DALL-E 3) to generate images, which may result in varying outputs for the same input.
-- Generated items are arranged in a grid layout, with a maximum of 2 columns.
-- The function processes the original AI-generated image to create a properly formatted sprite sheet.
-- When saving images, they are stored in an 'assets' folder with a filename based on the description.
-- The function may take some time to complete due to API calls and image processing.
-- Ensure you have the necessary permissions and API access to use the OpenAI image generation service.
+### Saving to Disk
+
+```javascript
+await generateCharacterSpritesheet('a ninja warrior', {
+  save: true,
+  size: '2048x2048'
+});
+// Saves to ./assets/ninja_warrior_spritesheet.png
+```
+
+## Notes
+
+- The function uses DALL-E 3 to generate the initial spritesheet image.
+- The generated spritesheet is organized with each row representing a different animation state.
+- When `save` is true, the spritesheet is saved in the `assets` folder of the current working directory.
+- The function automatically processes the generated image to create a properly formatted spritesheet with the specified number of frames and states.
+
+```mermaid
+graph TD
+    A[Start] --> B[Parse Options]
+    B --> C[Generate DALL-E Prompt]
+    C --> D[Call DALL-E API]
+    D --> E[Download Generated Image]
+    E --> F[Process into Spritesheet]
+    F --> G{Save to Disk?}
+    G -->|Yes| H[Save Spritesheet]
+    G -->|No| I[Prepare Result Object]
+    H --> I
+    I --> J[Return Result]
+    J --> K[End]
+```
