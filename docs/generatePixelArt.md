@@ -1,47 +1,204 @@
-# generatePixelArt Documentation
+# Image Processing Pipeline
 
-## Brief Description
-`generatePixelArt` is a function that generates a pixel art sprite based on a given description using AI-powered image generation and processing.
+This page describes the image processing pipeline used in the SpriteAI project, from initial API request through final sprite generation and optional background removal.
 
-## Usage
-To use `generatePixelArt`, import it from the sprite module and call it with a description of the pixel art sprite you want to generate.
+## Overview
 
-```javascript
-import { sprite } from './path/to/sprite/module';
+The pipeline consists of the following main steps:
 
-const result = await sprite.generatePixelArt(description, options);
+1. API Request to DALL-E
+2. Image Download 
+3. Spritesheet Generation
+4. Background Removal (Optional)
+5. Image Saving (Optional)
+
+```mermaid
+graph TD
+    A[Start] --> B[API Request to DALL-E]
+    B --> C[Image Download]
+    C --> D[Spritesheet Generation]
+    D --> E{Background Removal?}
+    E -->|Yes| F[Remove Background]
+    E -->|No| G{Save Image?}
+    F --> G
+    G -->|Yes| H[Save Image]
+    G -->|No| I[End]
+    H --> I
 ```
 
-## Parameters
-- `description` (string, required): A text description of the pixel art sprite to generate.
-- `options` (object, optional):
-  - `save` (boolean): Whether to save the generated image to disk.
-  - Other options inherited from the base generate function.
+## Detailed Pipeline
 
-## Return Value
-Returns an object containing:
-- `image`: Base64-encoded image data URL of the generated pixel art sprite.
-- `url`: Direct URL to the generated image.
+### 1. API Request to DALL-E
 
-## Examples
+The process begins with constructing a detailed prompt describing the desired character or landscape sprite. This prompt is sent to OpenAI's DALL-E 3 model via API request:
 
-1. Generate a simple pixel art sprite:
 ```javascript
-const result = await sprite.generatePixelArt("A pixelated robot");
-console.log(result.image);
-console.log(result.url);
+const openAiObject = new OpenAI();
+const response = await openAiObject.images.generate({
+  model: "dall-e-3",
+  prompt: prompt,
+  size: size,
+  n: 1
+});
 ```
 
-2. Generate and save a pixel art sprite:
-```javascript
-const result = await sprite.generatePixelArt("A pixel art cat", { save: true });
-console.log("Saved pixel art sprite:", result.url);
+```mermaid
+sequenceDiagram
+    participant A as SpriteAI
+    participant B as DALL-E API
+    A->>B: Send prompt and parameters
+    B->>A: Return generated image URL
 ```
 
-## Notes or Considerations
-- The function uses AI models (DALL-E 3) to generate pixel art images, which may result in varying outputs for the same input.
-- Generated sprites are optimized for a pixel art style with a maximum of 32x32 pixels.
-- The function converts images to a limited color palette for authentic pixel art appearance.
-- When saving images, they are stored with a timestamp-based filename.
-- The function may take some time to complete due to API calls and image processing.
-- Ensure you have the necessary permissions and API keys set up for using the OpenAI image generation service.
+### 2. Image Download
+
+Once DALL-E generates the image, it's downloaded using axios:
+
+```javascript
+const res = await axios.get(response.data[0].url, { responseType: 'arraybuffer' });
+const imgBuffer = Buffer.from(res.data);
+```
+
+```mermaid
+sequenceDiagram
+    participant A as SpriteAI
+    participant B as Image Server
+    A->>B: GET request for image
+    B->>A: Return image data
+    A->>A: Convert to Buffer
+```
+
+### 3. Spritesheet Generation 
+
+For character spritesheets, the downloaded image is processed to create an organized spritesheet with proper padding between sprites:
+
+```javascript
+const spritesheet = await generateSpritesheet(imgBuffer, {
+  rows: states.length,
+  framesPerState: framesPerState,
+  padding: padding
+});
+```
+
+```mermaid
+graph TD
+    A[Start] --> B[Load Image]
+    B --> C[Determine Sprite Size]
+    C --> D[Create Canvas]
+    D --> E[Loop Through States]
+    E --> F[Extract Sprites]
+    F --> G[Place Sprites on Canvas]
+    G --> H[Add Padding]
+    H --> I[Save Spritesheet]
+    I --> J[End]
+```
+
+### 4. Background Removal (Optional)
+
+For landscape sprites, there's an option to remove the background:
+
+```javascript
+if (options.removeBackground) {
+  // Process involves:
+  // 1. Writing image to temporary file
+  // 2. Removing background color
+  // 3. Reading processed image back
+  // 4. Cleaning up temporary files
+}
+```
+
+The background removal uses the Jimp library to replace pixels matching a target color (typically white) with transparency.
+
+```mermaid
+graph TD
+    A[Start] --> B[Write to Temp File]
+    B --> C[Load Image with Jimp]
+    C --> D[Scan Pixels]
+    D --> E{Pixel Matches Target?}
+    E -->|Yes| F[Set Pixel Transparent]
+    E -->|No| G[Keep Pixel]
+    F --> H{More Pixels?}
+    G --> H
+    H -->|Yes| D
+    H -->|No| I[Save Processed Image]
+    I --> J[Read Processed Image]
+    J --> K[Clean Up Temp Files]
+    K --> L[End]
+```
+
+### 5. Image Saving (Optional)
+
+If requested, the final processed image can be saved to the local filesystem:
+
+```javascript
+if (options.save) {
+  const filename = path.join(assetsDir, `${description.replace(/\s+/g, '_')}_landscape.png`);
+  await sharp(imgBuffer).toFile(filename);
+}
+```
+
+```mermaid
+graph TD
+    A[Start] --> B{Save Option Enabled?}
+    B -->|Yes| C[Generate Filename]
+    C --> D[Use Sharp to Save Image]
+    D --> E[End]
+    B -->|No| E
+```
+
+## Output
+
+The pipeline returns an object containing:
+
+- URL of the original DALL-E generated image
+- Base64 encoded processed image (spritesheet or landscape)
+- Metadata about the generated sprite, including dimensions, animation states (for characters), and other relevant details
+
+This processed image data can then be used directly in game development or further asset creation workflows.
+
+```mermaid
+classDiagram
+    class OutputObject {
+        +String originalUrl
+        +String processedImageBase64
+        +Object metadata
+        +getDimensions()
+        +getAnimationStates()
+    }
+    class Metadata {
+        +Number width
+        +Number height
+        +String[] animationStates
+        +Number framesPerState
+    }
+    OutputObject *-- Metadata
+```
+
+## Error Handling
+
+The pipeline includes robust error handling to manage potential issues during the image generation and processing stages:
+
+- API Request Errors: If the DALL-E API request fails, the error is caught and logged, allowing for appropriate user feedback or retry mechanisms.
+- Image Download Errors: Network issues or invalid image data are handled to prevent pipeline disruption.
+- Processing Errors: Errors during spritesheet generation or background removal are caught and reported, ensuring the pipeline can gracefully handle unexpected issues.
+
+```javascript
+try {
+  // Pipeline steps
+} catch (error) {
+  console.error('Error in image processing pipeline:', error);
+  // Handle error (e.g., return error response, retry, etc.)
+}
+```
+
+Proper error handling ensures a more robust and user-friendly experience, especially important in a production environment where reliability is key.
+
+## Performance Considerations
+
+To optimize the pipeline's performance:
+
+1. Image caching is implemented to reduce redundant API calls and image processing for frequently requested sprites.
+2. Asynchronous processing is used where possible to improve responsiveness.
+3. Resource-intensive operations like background removal are optional and can be toggled based on user needs or system capabilities.
+
+These optimizations help balance quality output with efficient resource usage, crucial for maintaining responsiveness in game development workflows.
