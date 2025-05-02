@@ -85,7 +85,7 @@ const availableStyles = await fetchAvailableSpriteStyles();
 console.log(availableStyles); // ['pixel-art', 'vector', '3d', 'hand-drawn', 'anime']
 ```
 
-## Saving Generated
+## Saving Generated Sprites
 
 To save generated assets locally, include the `save: true` option in the function call:
 
