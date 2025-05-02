@@ -7,10 +7,15 @@ spriteAI is a powerful project designed to generate character spritesheets, pixe
 spriteAI offers a range of functions to create various types of game assets:
 
 1. Character Spritesheets
+
 2. Pixel Art Sprites
+
 3. Animated Emojis
+
 4. Isometric Sprites
+
 5. Environment Sprites
+
 6. Item Sprites
 
 Each of these features utilizes AI models (primarily DALL-E 3) to generate high-quality, customizable assets based on text descriptions.
@@ -111,9 +116,11 @@ generateItemSprites(description, options)
 
 ## Utility Functions
 
-- `removeBackgroundColor`: Removes a specific background color from an image.
-- `fetchAvailableAnimationStates`: Retrieves a list of available animation states.
-- `fetchAvailableSpriteStyles`: Provides a list of available sprite styles.
+* `removeBackgroundColor`: Removes a specific background color from an image.
+
+* `fetchAvailableAnimationStates`: Retrieves a list of available animation states.
+
+* `fetchAvailableSpriteStyles`: Provides a list of available sprite styles.
 
 ## Getting Started
 
@@ -127,10 +134,13 @@ Make sure you have the required API credentials set up for using the OpenAI imag
 
 ## Usage Notes
 
-- All generation functions use AI models, which may produce varying results for the same input.
-- Generated assets are typically returned as Base64-encoded image data URLs.
-- Most functions offer an option to save the generated images to disk.
-- Processing times may vary due to API calls and image processing.
+* All generation functions use AI models, which may produce varying results for the same input.
+
+* Generated assets are typically returned as Base64-encoded image data URLs.
+
+* Most functions offer an option to save the generated images to disk.
+
+* Processing times may vary due to API calls and image processing.
 
 For detailed information on each function, please refer to their specific documentation pages.
 
@@ -138,6 +148,4 @@ For detailed information on each function, please refer to their specific docume
 
 Contributions to spriteAI are welcome. Please refer to the project's GitHub repository for guidelines on how to contribute.
 
-## License
-
-spriteAI is licensed under the MIT License. See the LICENSE file in the project repository for full license text.
+##
