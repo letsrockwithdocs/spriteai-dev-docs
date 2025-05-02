@@ -144,8 +144,4 @@ Make sure you have the required API credentials set up for using the OpenAI imag
 
 For detailed information on each function, please refer to their specific documentation pages.
 
-## Contributing
-
-Contributions to spriteAI are welcome. Please refer to the project's GitHub repository for guidelines on how to contribute.
-
 ##
